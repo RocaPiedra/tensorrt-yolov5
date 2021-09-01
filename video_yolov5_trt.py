@@ -21,6 +21,7 @@ INPUT_H = 608
 CONF_THRESH = 0.7
 IOU_THRESHOLD = 0.4
 
+FPS = 0
 
 def plot_one_box(x, img, color=None, label=None, line_thickness=None):
     """
@@ -36,6 +37,7 @@ def plot_one_box(x, img, color=None, label=None, line_thickness=None):
         no return
 
     """
+
     tl = (
         line_thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1
     )  # line/font thickness
@@ -57,6 +59,7 @@ def plot_one_box(x, img, color=None, label=None, line_thickness=None):
             thickness=tf,
             lineType=cv2.LINE_AA,
         )
+    
 
 
 class YoLov5TRT(object):
@@ -109,6 +112,8 @@ class YoLov5TRT(object):
         self.bindings = bindings
 
     def infer(self, image2process, video=False):
+        global FPS
+        
         threading.Thread.__init__(self)
         # Make self the active context, pushing it on top of the context stack.
         self.cfx.push()
@@ -121,6 +126,7 @@ class YoLov5TRT(object):
         host_outputs = self.host_outputs
         cuda_outputs = self.cuda_outputs
         bindings = self.bindings
+        
         # Do image preprocess
         input_image, image_raw, origin_h, origin_w = self.preprocess_image(
             image2process
@@ -153,6 +159,19 @@ class YoLov5TRT(object):
                     categories[int(result_classid[i])], result_scores[i]
                 ),
             )
+        frames = int(round(FPS))    
+        if frames != 0:
+            print('number of frames is', frames)
+            # cv2.putText(
+            #     image_raw,
+            #     frames,
+            #     (20, 20),
+            #     0,
+            #     10,
+            #     [225, 255, 255],
+            #     thickness=5,
+            #     lineType=cv2.LINE_AA,
+            # )
 
         if not video:
             
@@ -163,6 +182,8 @@ class YoLov5TRT(object):
         else:
             cv2.imshow('Frame',image_raw)
             cv2.waitKey(1)
+
+        return image_raw
 
     def destroy(self):
         # Remove any context from the top of the context stack, deactivating it.
@@ -297,7 +318,7 @@ if __name__ == "__main__":
     # load custom plugins
     PLUGIN_LIBRARY = "build/libmyplugins.so"
     ctypes.CDLL(PLUGIN_LIBRARY)
-    engine_file_path = "build/yolov5s.engine"
+    engine_file_path = "build/yolov5s.plan"
 
     # load coco labels
 
@@ -315,7 +336,7 @@ if __name__ == "__main__":
     yolov5_wrapper = YoLov5TRT(engine_file_path)
 
     # from https://github.com/ultralytics/yolov5/tree/master/inference/images
-    input_image_paths = ["image_1.jpg", "image_2.jpg", "video_2.mp4"]
+    input_image_paths = ["video_1.mp4", "video_2.mp4"]
     for input_image_path in input_image_paths:
         # create a new thread to do inference
         input_path = "test/" + input_image_path
@@ -344,15 +365,14 @@ if __name__ == "__main__":
                     # print('passing image to thread to do inference',ret)
                     # cv2.imshow('input',frame)
                     # cv2.waitKey(1)
-                    yolov5_wrapper.infer(frame, True)
+                    output = yolov5_wrapper.infer(frame, True)
                     # print('image passed to thread')
-                else:
-                    print('frame not passed to thread, destroy engine')
-                    yolov5_wrapper.destroy()
-                    exit()
+                else: 
+                    print('frame not passed to thread, next input')
+                    break
                 tac = time.perf_counter()-tic
-                fps = 1/tac
-                print(fps)
+                FPS = 1/tac
+                print(FPS)
 
         thread1.start()
         thread1.join()
