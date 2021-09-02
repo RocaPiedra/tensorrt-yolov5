@@ -177,8 +177,11 @@ class YoLov5TRT(object):
             # 　Save image
             cv2.imwrite(save_name, image_raw)
         else:
-            cv2.imshow('Frame',image_raw)
-            cv2.waitKey(1)
+            try:
+                cv2.imshow('Frame',image_raw)
+                cv2.waitKey(1)
+            except:
+                print('opencv cant display a window')
 
         return image_raw
 
