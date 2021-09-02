@@ -16,6 +16,7 @@ import tensorrt as trt
 import torch
 import torchvision
 
+MODEL_SIZE = 's'
 INPUT_W = 608
 INPUT_H = 608
 CONF_THRESH = 0.7
@@ -59,12 +60,16 @@ def plot_one_box(x, img, color=None, label=None, line_thickness=None):
             thickness=tf,
             lineType=cv2.LINE_AA,
         )
-    
+
+def average_frame_rate(fps_vector):
+    average = np.mean(fps_vector)
+    return average
+
 
 
 class YoLov5TRT(object):
     """
-    description: A YOLOv5 class that warps TensorRT ops, preprocess and postprocess ops.
+    description: A YOLOv5 class that wraps TensorRT ops, preprocess and postprocess ops.
     """
 
     def __init__(self, engine_file_path):
@@ -159,19 +164,11 @@ class YoLov5TRT(object):
                     categories[int(result_classid[i])], result_scores[i]
                 ),
             )
-        frames = int(round(FPS))    
+        frames = str(int(round(FPS)))    
         if frames != 0:
             print('number of frames is', frames)
-            # cv2.putText(
-            #     image_raw,
-            #     frames,
-            #     (20, 20),
-            #     0,
-            #     10,
-            #     [225, 255, 255],
-            #     thickness=5,
-            #     lineType=cv2.LINE_AA,
-            # )
+            frame_text = 'FPS:' + frames
+            cv2.putText(image_raw,frame_text,(20, 30),0,0.8,[0, 255, 255],thickness=1,lineType=cv2.LINE_AA)
 
         if not video:
             
@@ -318,7 +315,8 @@ if __name__ == "__main__":
     # load custom plugins
     PLUGIN_LIBRARY = "build/libmyplugins.so"
     ctypes.CDLL(PLUGIN_LIBRARY)
-    engine_file_path = "build/yolov5s.plan"
+    engine_file_path = "build/yolov5{0}.engine".format(MODEL_SIZE)
+    fps_vector = []
 
     # load coco labels
 
@@ -336,7 +334,7 @@ if __name__ == "__main__":
     yolov5_wrapper = YoLov5TRT(engine_file_path)
 
     # from https://github.com/ultralytics/yolov5/tree/master/inference/images
-    input_image_paths = ["video_1.mp4", "video_2.mp4"]
+    input_image_paths = ["video_2.mp4"]
     for input_image_path in input_image_paths:
         # create a new thread to do inference
         input_path = "test/" + input_image_path
@@ -372,10 +370,15 @@ if __name__ == "__main__":
                     break
                 tac = time.perf_counter()-tic
                 FPS = 1/tac
-                print(FPS)
+                fps_vector.append(1/tac)
+                # print(FPS)
 
         thread1.start()
         thread1.join()
+    
+    meanfps = average_frame_rate(fps_vector)
+    print('average fps achieved is:',meanfps)
+
 
     # destroy the instance
     yolov5_wrapper.destroy()
