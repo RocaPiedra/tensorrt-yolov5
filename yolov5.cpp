@@ -35,7 +35,7 @@ ICudaEngine* createEngine_s(unsigned int maxBatchSize, IBuilder* builder, IBuild
     ITensor* data = network->addInput(INPUT_BLOB_NAME, dt, Dims3{ 3, INPUT_H, INPUT_W });
     assert(data);
 
-    std::map<std::string, Weights> weightMap = loadWeights("../yolov5s.wts");
+    std::map<std::string, Weights> weightMap = loadWeights("../wts/yolov5s.wts");
     Weights emptywts{ DataType::kFLOAT, nullptr, 0 };
 
     // yolov5 backbone
@@ -123,7 +123,7 @@ ICudaEngine* createEngine_m(unsigned int maxBatchSize, IBuilder* builder, IBuild
     ITensor* data = network->addInput(INPUT_BLOB_NAME, dt, Dims3{ 3, INPUT_H, INPUT_W });
     assert(data);
 
-    std::map<std::string, Weights> weightMap = loadWeights("../yolov5m.wts");
+    std::map<std::string, Weights> weightMap = loadWeights("../wts/yolov5m.wts");
     Weights emptywts{ DataType::kFLOAT, nullptr, 0 };
 
     /* ------ yolov5 backbone------ */
@@ -214,7 +214,7 @@ ICudaEngine* createEngine_l(unsigned int maxBatchSize, IBuilder* builder, IBuild
     ITensor* data = network->addInput(INPUT_BLOB_NAME, dt, Dims3{ 3, INPUT_H, INPUT_W });
     assert(data);
 
-    std::map<std::string, Weights> weightMap = loadWeights("../yolov5l.wts");
+    std::map<std::string, Weights> weightMap = loadWeights("../wts/yolov5l.wts");
     Weights emptywts{ DataType::kFLOAT, nullptr, 0 };
 
     /* ------ yolov5 backbone------ */
@@ -303,7 +303,7 @@ ICudaEngine* createEngine_x(unsigned int maxBatchSize, IBuilder* builder, IBuild
     ITensor* data = network->addInput(INPUT_BLOB_NAME, dt, Dims3{ 3, INPUT_H, INPUT_W });
     assert(data);
 
-    std::map<std::string, Weights> weightMap = loadWeights("../yolov5x.wts");
+    std::map<std::string, Weights> weightMap = loadWeights("../wts/yolov5x.wts");
     Weights emptywts{ DataType::kFLOAT, nullptr, 0 };
 
     /* ------ yolov5 backbone------ */
@@ -496,6 +496,7 @@ int main(int argc, char** argv) {
     int fcount = 0;
     while(1)
     {
+        auto fullstart = std::chrono::system_clock::now();
         cv::Mat frame;
         capture >> frame;
         if(frame.empty())
@@ -541,9 +542,12 @@ int main(int argc, char** argv) {
                 cv::rectangle(frame, r, cv::Scalar(0x27, 0xC1, 0x36), 2);
 		std::string label = coco_classes[(int)res[j].class_id];
 		cv::putText(frame, label, cv::Point(r.x, r.y - 1), cv::FONT_HERSHEY_PLAIN, 1.2, cv::Scalar(0xFF, 0xFF, 0xFF), 1.2);
-		std::string jetson_fps = "FPS: " + std::to_string(fps);
-		cv::putText(frame, jetson_fps, cv::Point(11,80), cv::FONT_HERSHEY_PLAIN, 3, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+
             }
+        auto fullend = std::chrono::system_clock::now();
+        int fullfps = 1000.0/std::chrono::duration_cast<std::chrono::milliseconds>(fullend - fullstart).count();
+        std::string jetson_fps = "FPS: " + std::to_string(fps) + " REAL FPS:" + std::to_string(fullfps);
+		cv::putText(frame, jetson_fps, cv::Point(11,80), cv::FONT_HERSHEY_PLAIN, 3, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
         }
         
 	cv::imshow("yolov5",frame);
