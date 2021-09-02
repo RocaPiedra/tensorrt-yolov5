@@ -55,6 +55,8 @@ iostream
 -
 chrono
 -
+numeric
+-
 cuda_runtime_api.h
 /home/jetsontx2/appide/tensorrt-yolov5/cuda_runtime_api.h
 logging.h

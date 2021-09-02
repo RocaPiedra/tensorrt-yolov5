@@ -1,5 +1,6 @@
 #include <iostream>
 #include <chrono>
+#include <numeric>
 #include "cuda_runtime_api.h"
 #include "logging.h"
 #include "common.hpp"
@@ -420,6 +421,9 @@ int main(int argc, char** argv) {
     size_t size{ 0 };
     std::string engine_name = STR2(NET);
     engine_name = "yolov5" + engine_name + ".engine";
+    // create fps list to store and later measure average frames
+    std::list<float> fps_list;
+    
     if (argc == 2 && std::string(argv[1]) == "-s") {
         IHostMemory* modelStream{ nullptr };
         APIToModel(BATCH_SIZE, &modelStream);
@@ -545,8 +549,11 @@ int main(int argc, char** argv) {
 
             }
         auto fullend = std::chrono::system_clock::now();
-        int fullfps = 1000.0/std::chrono::duration_cast<std::chrono::milliseconds>(fullend - fullstart).count();
-        std::string jetson_fps = "FPS: " + std::to_string(fps) + " REAL FPS:" + std::to_string(fullfps);
+        float fullfps = 1000.0/std::chrono::duration_cast<std::chrono::milliseconds>(fullend - fullstart).count();
+        fps_list.push_back(fullfps);
+        //std::cout << "length of list of fps is: " << fps_list.size() << std::endl;
+        
+        std::string jetson_fps = "FPS: " + std::to_string(fps) + " REAL FPS:" + std::to_string(int(fullfps));
 		cv::putText(frame, jetson_fps, cv::Point(11,80), cv::FONT_HERSHEY_PLAIN, 3, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
         }
         
@@ -568,6 +575,10 @@ int main(int argc, char** argv) {
     context->destroy();
     engine->destroy();
     runtime->destroy();
+
+    float fps_sum = std::accumulate(std::begin(fps_list), std::end(fps_list), 0.0);
+    float average_fps = fps_sum/fps_list.size();
+    std::cout << "average fps:" << average_fps << std::endl;
 
     return 0;
 }
